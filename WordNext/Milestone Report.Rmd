@@ -1,0 +1,268 @@
+---
+title: "Milestone Report"
+author: "Noor Ahmed"
+date: "Thursday, March 19, 2015"
+output: html_document
+---
+
+```{r load-project, include=FALSE}
+# Using ProjectTemplate library to organize project folders and pre-processing
+setwd (".")     # project home folder
+#library (ProjectTemplate)
+#load.project ()
+```
+### Introduction
+Around the world, people are spending an increasing amount of time on their mobile devices for email, social networking, banking and a whole range of other activities. But typing on mobile devices can be a serious pain. SwiftKey, our corporate partner in this capstone, builds a smart keyboard that makes it easier for people to type on their mobile devices. One cornerstone of their smart keyboard is predictive text models.
+
+### Objective
+The goal of this capstone project is to build a model that can predict the text accurately while user is typing and provide suggestions on the next related word(s) based on the context by using prediction algorithm similar to those used by SwiftKey. As the usage is mostly through mobile devices which are resource constrained, the model should be effective in terms of performance and accuracy.
+                                                                              
+### Planned Approach
+The predictive model will consume a set of text data through multiple sources to learn various aspects of the language used (eg. style of written language, grammar and contexts) and then predict the next words appropriately while user is typing.
+
+
+### About Data
+The corpus data used in this report is generated with a freely available data from HC corpora project. The corpora are collected from publicly available sources by a web crawler. The sources include news, blogs, and Twitter. 
+
+Listed below are the various data sources used to build the model:
+
+* [Capstone Dataset](http://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip)   (source: Coursera website)
+
+####External Datasets
+* [Spell correction using aspell or Peter Norvig's method](http://norvig.com/spell-correct.html)     (source: norvig.com)
+* [Profanity words list for English](https://github.com/shutterstock/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/)   (source: shutterstock)
+
+### Data Exploration
+#### Capstone Dataset
+This Capstone dataset contains training data covering four different locales namely US English (en-US), German (de-DE), Russian (ru-RU), and Finnish (fi-FI).  However, only "en-US" locale dataset is being analyzed in this report. 
+
+
+Listed below are some highlevel stats (lines and word counts) for each dataset for English language. 
+
+####Blogs
+```{r load_Blogs, include=FALSE, cache=TRUE}
+# file name
+file <- "./data/final/en_US/en_US.blogs.txt"
+
+# load the blogs data
+blogs <- readLines (file, skipNul = TRUE)
+
+# find the length of each line
+lengths <- unlist (lapply (blogs, nchar))
+
+# wordcount
+require(stringi)
+words_blogs   <- sum(stri_count_words(blogs))
+
+```
+
+* The data file  __`r basename(file)`__ contains text pulled from multiple internet blogs written by various authors with less degree of commanality in the written text.
+* The data file contains a single blog document on each line.
+
+ Content Type | Filename | No. of Words | No. of Lines | Longest Line | Shortest Line
+ --- | --- | --- | --- | --- | --- | --- 
+ Blog entries | `r basename(file)` | `r words_blogs` words | `r length(blogs)` |`r max(lengths)` characters | `r min(lengths)` characters 
+
+
+####News
+```{r load_News, include=FALSE, cache=TRUE}
+# file name
+file <- "./data/final/en_US/en_US.news.txt"
+
+# load the news data
+news <- readLines (file, skipNul = TRUE)
+
+# find the length of each line
+lengths <- unlist (lapply (news, nchar))
+
+# wordcount
+require(stringi)
+words_news   <- sum(stri_count_words(news))
+
+```
+
+
+* The data file  __`r basename(file)`__ contains news stories written by professional journalists.
+* The data file contains a single news article on each line.
+
+ Content Type | Filename | No. of Words | No. of Lines | Longest Line | Shortest Line
+ --- | --- | --- | --- | --- | --- | --- 
+ Blog entries | `r basename(file)` | `r words_news` words | `r length(news)` |`r max(lengths)` characters | `r min(lengths)` characters 
+
+
+####Twitter
+```{r load_Twitter, include=FALSE, cache=TRUE}
+# file name
+file <- "./data/final/en_US/en_US.twitter.txt"
+
+# load the twitter data
+twitter <- readLines (file, skipNul = TRUE)
+
+# find the length of each line
+lengths <- unlist (lapply (twitter, nchar))
+
+# wordcount
+require(stringi)
+words_twitter  <- sum(stri_count_words(twitter))
+
+```
+
+
+* The data file  __`r basename(file)`__ contains text pulled from Twitter posted by diversified authors with less degree of commanality in the written text.
+* The data file contains a single tweet on each line.
+
+ Content Type | Filename | No. of Words | No. of Lines | Longest Line | Shortest Line
+ --- | --- | --- | --- | --- | --- | --- 
+ Blog entries | `r basename(file)` | `r words_twitter` words | `r length(twitter)` |`r max(lengths)` characters | `r min(lengths)` characters 
+
+
+###Visualizing individual datasets using wordclouds
+
+A wordcloud (Tag cloud) is a visual representation for text data, typically used to depict keywords or to visualize free form text. Tags are usually single words, and the importance of each tag is shown with font size or color. This format is useful for quickly perceiving the most prominent terms and to determine its relative prominence.
+
+__Note: As the datasets are large, a small sample(10%) of the each dataset will be shown here for analysis.__
+
+
+```{r load-functions, include=FALSE}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# function to remove non-printing characters
+#--------------------------------------------------------------#
+remove_nonprint <- function (x) gsub ("[^[:print:]]+", "", x)
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# function performs pre-processing on 1 or more sentences.
+#--------------------------------------------------------------#
+require(stringi)
+clean_sentences <- function (sentences, start_tag = "^", end_tag = "$") {
+    
+    # lower case
+    sentences <- stri_trans_tolower (sentences)
+    
+    # remove anything that is not alpha, numeric, whitespace or ' (for contractions)
+    sentences <- stri_replace_all_regex (sentences, "[^[:alnum:][:blank:]']+", " ")
+    
+    # replace all digits with a simple indicator flag
+    sentences <- stri_replace_all_regex (sentences, "[[:digit:]]+", "###")
+    
+    # add starting/ending tag to each sentence
+    sentences <- stri_paste (start_tag, sentences, end_tag, sep = " ")
+    
+    # trim whitespace
+    sentences <- stri_trim_both (sentences)
+    
+    return (sentences)
+}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# a useful function for when no starting or ending tags are needed
+#--------------------------------------------------------------#
+clean_sentences0 <- function (x) clean_sentences (x, start_tag = "", end_tag = "")
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+# a useful function to create a corpus
+#--------------------------------------------------------------#
+require(tm)
+require(stringi)
+CreateCorpus <- function (x) 
+{
+    stopifnot((length(x) > 0),(is.character(x))) 
+    
+    corpus <- Corpus (VectorSource (x))
+    corpus <- tm_map (corpus, content_transformer(remove_nonprint))    
+    corpus <- tm_map (corpus, content_transformer(stri_trans_tolower))
+    corpus <- tm_map (corpus, removePunctuation)
+    corpus <- tm_map (corpus, removeNumbers)
+    corpus <- tm_map (corpus, removeWords, stopwords("english"))
+#   corpus <- tm_map (corpus, stemDocument, language = "english")
+    corpus <- tm_map (corpus, stripWhitespace)
+    corpus <- tm_map (corpus, content_transformer(stri_trim_both))
+    return (corpus)
+}
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~#
+
+```
+
+
+```{r wordcloud-library, include=FALSE}
+require(wordcloud)
+```
+
+
+##### Wordcloud of Blogs sample dataset
+```{r sampling_blogs, include=FALSE, cache=TRUE}
+# Sampling 10% of the blogs feed
+index <- as.logical (rbinom (n = length (blogs), size = 1, prob = 0.10))
+blogsSample <- blogs[index]
+
+# clean sentences
+blogsSample <- clean_sentences(blogsSample)
+
+# create corpus
+blogs_corpus <- CreateCorpus(blogsSample)
+```
+
+```{r wordcloud_blogs, warning=FALSE, echo=FALSE, fig.cap="Wordcloud of blogs sample", cache=TRUE}
+# create a wordcloud of corpus
+wordcloud (blogs_corpus, 
+           scale=c(5,0.5), 
+           max.words=200, 
+           random.order=FALSE, 
+           rot.per=0.35, 
+           use.r.layout=FALSE, 
+           colors=brewer.pal(8, 'Dark2'))
+```
+
+
+##### Wordcloud of News sample dataset
+```{r sampling_news, include=FALSE, cache=TRUE}
+# Sampling 10% of the news feed
+index <- as.logical (rbinom (n = length (news), size = 1, prob = 0.10))
+newsSample <- news[index]
+
+# clean sentences
+newsSample <- clean_sentences(newsSample)
+
+# create corpus
+news_corpus <- CreateCorpus(newsSample)
+```
+
+```{r wordcloud_news, warning=FALSE, echo=FALSE, fig.cap="Wordcloud of news sample", cache=TRUE}
+# create a wordcloud of corpus
+wordcloud (news_corpus, 
+           scale=c(5,0.5), 
+           max.words=200, 
+           random.order=FALSE, 
+           rot.per=0.35, 
+           use.r.layout=FALSE, 
+           colors=brewer.pal(8, 'Dark2'))
+```
+
+
+##### Wordcloud of Twitter sample dataset
+```{r sampling_twitter, include=FALSE, cache=TRUE}
+# Sampling 10% of the twitter feed
+index <- as.logical (rbinom (n = length (twitter), size = 1, prob = 0.10))
+twitterSample <- twitter[index]
+
+# clean sentences
+twitterSample <- clean_sentences(twitterSample)
+
+# create corpus
+twitter_corpus <- CreateCorpus(twitterSample)
+```
+
+```{r wordcloud_twitter, warning=FALSE, echo=FALSE, fig.cap="Wordcloud of twitter sample", cache=TRUE}
+# create a wordcloud of corpus
+wordcloud (twitter_corpus, 
+           scale=c(5,0.5), 
+           max.words=200, 
+           random.order=FALSE, 
+           rot.per=0.35, 
+           use.r.layout=FALSE, 
+           colors=brewer.pal(8, 'Dark2'))
+```
+
