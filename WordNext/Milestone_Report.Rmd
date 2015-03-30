@@ -2,8 +2,7 @@
 title: "Milestone Report"
 author: "Noor Ahmed"
 date: "Thursday, March 19, 2015"
-output: html_document
-<!-- rmarkdown v1 -->
+output: pdf_document
 ---
 
 ```{r load-project, include=FALSE}
@@ -101,7 +100,7 @@ words_news   <- sum(stri_count_words(news))
 
  Content Type | Filename | Wordcount | LineCount | Longest Line | Shortest Line
  --- | --- | --- | --- | --- | --- | --- 
- Blog entries | `r basename(file)` | `r words_news` words | `r length(news)` |`r max(lengths)` characters | `r min(lengths)` characters 
+ News articles | `r basename(file)` | `r words_news` words | `r length(news)` |`r max(lengths)` characters | `r min(lengths)` characters 
 
 
 ####Twitter
@@ -127,7 +126,7 @@ words_twitter  <- sum(stri_count_words(twitter))
 
  Content Type | Filename | Wordcount | LineCount | Longest Line | Shortest Line
  --- | --- | --- | --- | --- | --- | --- 
- Blog entries | `r basename(file)` | `r words_twitter` words | `r length(twitter)` |`r max(lengths)` characters | `r min(lengths)` characters 
+ Twitter posts | `r basename(file)` | `r words_twitter` words | `r length(twitter)` |`r max(lengths)` characters | `r min(lengths)` characters 
 
 
 
@@ -290,6 +289,7 @@ total_wordcount <- sum(words_blogs,words_twitter,words_news)
 
 ### Conclusion
 * Capstone datasets contains text from diversified authors with less degree of commanality in the written text.
-* Twitter feed contains majority of profane words compared to Blogs and News texts.
-* Overall, Blogs contribute `r (words_blogs/total_wordcount)` percent of words, twitter contributes `r (words_twitter/total_wordcount)` percent and remaining `r (words_news/total_wordcount)` percent is from news.
 
+* Twitter feed contains majority of profane words compared to Blogs and News texts.
+ 
+ Overall, Blogs contribute `r ((words_blogs/total_wordcount)*100)` percent of words, twitter contributes `r ((words_twitter/total_wordcount)*100)` percent and remaining `r ((words_news/total_wordcount)*100)` percent is from news.
